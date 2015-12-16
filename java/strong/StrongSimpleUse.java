@@ -15,7 +15,9 @@ public class StrongSimpleUse {
 		StrongWorker w1 = new StrongWorker(new SingleTE());
 		StrongWorker w2 = new StrongWorker(new SingleTE());
 		StrongChain chain = new StrongChain();
-		chain.workOn(w0).addAction(new Action<String, File>() {
+		chain
+		.workOn(w0)
+		.addAction(new Action<String, File>() {
 			@Override
 			public File getResult(String s) {
 				Utils.ptn("action0");
@@ -23,11 +25,13 @@ public class StrongSimpleUse {
 			}
 
 			@Override
-			public void onError() {
+			public void onError(Throwable t) {
 			}
-		}).workOn(w1).addAction(new Action<File, Long>() {
+		})
+		.workOn(w1)
+		.addAction(new Action<File, Long>() {
 			@Override
-			public void onError() {
+			public void onError(Throwable t) {
 			}
 
 			@Override
@@ -35,22 +39,44 @@ public class StrongSimpleUse {
 				Utils.ptn("action1");
 				return s.length();
 			}
-		}).workOn(w2).addAction(new Action<Long, String>() {
+		})
+		.workOn(w2)
+		.addAction(new Action<Long, String>() {
 			@Override
-			public void onError() {
+			public void onError(Throwable t) {
 			}
 
 			@Override
 			public String getResult(Long s) {
 				Utils.ptn("action2");
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e1) {
+					e1.printStackTrace();
+				}
 				return (float) s / 1024f + "kb";
 			}
-		}).work(new Getter<String>() {
+		})
+		.work(new Getter<String>() {
 			public void onGet(String t) {
 				Utils.ptn("action3");
 				System.out.println(t);
 			}
 		}, path);
+		try {
+			Thread.sleep(50);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		chain.pause();
+		System.out.println("pause");
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		System.out.println("resume");
+		chain.resume();
 		try {
 			Thread.currentThread().join();
 		} catch (InterruptedException e) {

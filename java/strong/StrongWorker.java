@@ -27,7 +27,11 @@ public class StrongWorker {
 		executor.execute(new Runnable() {
 			@Override
 			public void run() {
-				chain.nextAction(action.getResult(s));
+				try{
+					chain.nextAction(action.getResult(s));
+				}catch(Throwable t){
+					action.onError(t);
+				}
 			}
 		});
 	}

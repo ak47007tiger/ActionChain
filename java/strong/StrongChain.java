@@ -9,22 +9,58 @@ import common.Getter;
 public class StrongChain {
 	private StrongWorker curWorker;
 	private Queue<Relation> actionQueue = new LinkedBlockingQueue<Relation>();
-	class Relation{
+	Object sign = new Object();
+	boolean pause = false;
+
+	class Relation {
 		Action<?, ?> action;
 		StrongWorker worker;
+
 		public Relation(Action<?, ?> action, StrongWorker worker) {
 			this.action = action;
 			this.worker = worker;
 		}
 	}
-	
+
+	public void stop() {
+		pause();
+		synchronized (actionQueue) {
+			actionQueue.clear();
+		}
+		resume();
+	}
+
+	public void resume() {
+		synchronized (sign) {
+			pause = false;
+			sign.notify();
+		}
+	}
+
+	public void pause() {
+		synchronized (sign) {
+			pause = true;
+		}
+	}
+
 	<S> void nextAction(S s) {
-		if (actionQueue.size() > 0) {
-			Relation relation = actionQueue.poll();
-			@SuppressWarnings("unchecked")
-			Action<S, ?> curAction = (Action<S, ?>) relation.action;
-			StrongWorker worker = relation.worker;
-			worker.work(curAction, s, this);
+		synchronized (sign) {
+			if (pause) {
+				try {
+					sign.wait();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		synchronized (actionQueue) {
+			if (actionQueue.size() > 0) {
+				Relation relation = actionQueue.poll();
+				@SuppressWarnings("unchecked")
+				Action<S, ?> nextAction = (Action<S, ?>) relation.action;
+				StrongWorker worker = relation.worker;
+				worker.work(nextAction, s, this);
+			}
 		}
 	}
 
@@ -47,13 +83,13 @@ public class StrongChain {
 			}
 
 			@Override
-			public void onError() {
+			public void onError(Throwable t) {
 			}
 		});
 		nextAction(s);
 	}
-	
-	<S> void work(S s){
+
+	<S> void work(S s) {
 		nextAction(s);
 	}
 }
